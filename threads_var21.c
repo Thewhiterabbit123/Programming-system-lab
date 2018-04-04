@@ -15,42 +15,26 @@ typedef struct {
 	int end;
 } ThreadRecord;
 
-double dt = 1, dx = 1, dy = 1, dz = 1, a= 1;
+double dt = 1, dx = 1, dy = 1, dz = 1, a = 1;
 double*** matrix;
 int y_grid = 0, x_grid = 0, t_grid = 0, thread_quantity = 0;;
 pthread_barrier_t barr;
 
-#define _FORCE_IMPACT(X, Y, T) X+Y+T
 #define _NEXT_TIME(Z2, Z1, Z0, DELTA) (Z2-2*Z1+Z0)/DELTA
 #define _STABLE(DX, A) DX*DX / 2*A
+
+double force_impact(int x, int y, int t) {
+    if(x == x_grid/2 && y == y_grid/2  && t < t_grid/5) {
+      return 1;
+    }
+    return 0;
+    
+}
 
 int next_time_t(int i, int j, int t) {
 	matrix[i][j][(t+1) % T_IN_MEMORY] = a*a*dt*((_NEXT_TIME(matrix[i+1][j][t % T_IN_MEMORY], matrix[i][j][t % T_IN_MEMORY], matrix[i-1][j][t % T_IN_MEMORY], dx)  + 
 									   			 _NEXT_TIME(matrix[i][j+1][t % T_IN_MEMORY], matrix[i][j][t % T_IN_MEMORY], matrix[i][j-1][t % T_IN_MEMORY], dy)) + 
-									   			 _FORCE_IMPACT(i, j, t)) + 2*matrix[i][j][t % T_IN_MEMORY] - matrix[i][j][(t-1)%T_IN_MEMORY];
-	return 0;
-}
-
-
-int gnu_plot_result() {
-	FILE *gnu = popen("gnuplot -persist", "w");
-	fprintf (gnu, "set dgrid3d\n");
-	fprintf (gnu, "set hidden3d\n");
-	fprintf (gnu, "splot '-' using 1:2:3 with lines\n");
-
-	double x_range = 0;
-	double y_range = 0;
-
-	for (int j = 0; j < y_grid; j++, y_range += dy) {
-		for (int i = 0; i < x_grid; i++, x_range += dx) {
-			fprintf(gnu, "%lf %lf %lf\n", x_range, y_range, matrix[i][j][(t_grid+1)%T_IN_MEMORY]);
-		}
-		x_range = 0;
-		fprintf (gnu, "\n");
-	}
-	fprintf (gnu, "e\n");
-
-	pclose(gnu);
+									   			force_impact(i, j, t)) + 2*matrix[i][j][t % T_IN_MEMORY] - matrix[i][j][(t-1)%T_IN_MEMORY];
 	return 0;
 }
 
@@ -62,8 +46,10 @@ void* solver(void* arg) {
 				next_time_t(i / x_grid, i % x_grid, k);
 			}	
 		}
-		pthread_barrier_wait(&barr);
+	pthread_barrier_wait(&barr);
+	pthread_barrier_wait(&barr);
 	}
+
 	
 	return NULL;
 }
@@ -105,7 +91,30 @@ int main(int argc, char const *argv[]) {
 	
 	matrix_memory();
 
-
+	
+	FILE * gnu = popen("gnuplot -persistent", "w");
+	fprintf(gnu, "set terminal gif animate delay 50\n");
+	fprintf(gnu, "set output 'animate.gif'\n");
+    
+	fprintf(gnu, "set ticslevel 0\n");
+	fprintf(gnu, "set xrange[0:%d]\n", x_grid-1);
+	fprintf(gnu, "set yrange[0:%d]\n", y_grid-1);
+	  
+	fprintf(gnu, "set dgrid3d\n");
+	fprintf(gnu, "set hidden3d\n");
+	 
+	fprintf(gnu, "do for [i=1:%d] {\n", t_grid);
+	fprintf(gnu, "splot '-' with lines\n");
+	fprintf(gnu, "}\n");
+	
+	for (int i = 0; i < x_grid; ++i) {
+	    for (int j = 0; j < y_grid; ++j) {
+	      fprintf(gnu, "%lf %lf %lf\n", (double)i, (double)j, matrix[i][j][0]);
+	      printf("%lf %lf %lf\n", (double)i, (double)j, matrix[i][j][0]);
+	    }
+	}
+	fprintf(gnu, "e\n");
+	
 	ThreadRecord* threads = NULL;
 	struct timeval tv1, tv2;
 	struct timezone tz;
@@ -117,11 +126,11 @@ int main(int argc, char const *argv[]) {
 	int thread_length = y_grid * x_grid / thread_quantity;
 
 	if (thread_length * thread_quantity != y_grid * x_grid) {
-		fprintf(stderr, "Thread count must be a multiple of y_grid*x_grid! Exit...\n");
+		fprintf(stderr, "Thread count must be a divider of y_grid*x_grid!\n");
 		exit(2);
 	}
 	
-	pthread_barrier_init(&barr, NULL, thread_quantity);
+	pthread_barrier_init(&barr, NULL, thread_quantity+1);
 
 	threads = (ThreadRecord*) calloc(thread_quantity, sizeof(ThreadRecord));
 
@@ -136,16 +145,32 @@ int main(int argc, char const *argv[]) {
 		}
 	}
 
+
+	
+	for (int k = 1; k < t_grid; ++k) {
+	pthread_barrier_wait(&barr);
+	  for (int i = 0; i < x_grid; ++i) {
+	    for (int j = 0; j < y_grid; ++j) {
+	      fprintf(gnu, "%lf %lf %lf\n", (double)i, (double)j, matrix[i][j][(k+1)%3]);
+	      printf("%lf %lf %lf\n", (double)i, (double)j, matrix[i][j][(k+1)%3]);
+	    }
+	  }
+	  fprintf(gnu, "e\n");
+	  pthread_barrier_wait(&barr);
+	}
+	pclose(gnu);
+	
+	
+	
 	for (int c = 0; c < thread_quantity; c++) {
-        pthread_join(threads[c].tid, NULL);
-    }
+	  pthread_join(threads[c].tid, NULL);
+	}
 
 
    	gettimeofday(&tv2, &tz);
 	printf("%ldms\n", tv2.tv_usec - tv1.tv_usec);
 
 
-	gnu_plot_result();
 
 	return 0;
 }
