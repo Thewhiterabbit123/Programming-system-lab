@@ -8,13 +8,12 @@
 #include <stdio.h>
 #include <errno.h>
 
-#define BUFSIZ 1024
-#define LOGIN_NAME_MAX 32
-#define HOST_NAME_MAX 32
+
+
 #define SMTP_PORT 25
 #define MAILTO 1
 
-char HELO_COMMAND[] = "EHLO test\n";
+char HELO_COMMAND[] = "HELO test\n";
 char MAIL_FROM[] = "MAIL FROM:<%s@%s>\t\n";
 char RCPT_TO[] = "RCPT TO:<%s>\r\n";
 char DATA[] = "DATA\r\n";
@@ -64,23 +63,18 @@ int main(int argc, char* argv[]) {
     gethostname(hostname, HOST_NAME_MAX);
     getlogin_r(login, LOGIN_NAME_MAX);
 
-    // Посылка EHLO
     runSmtpCommand(HELO_COMMAND, s, 0);
 
-    // Посылка MAIL FROM
     char* buf = (char*) calloc (BUFSIZ, sizeof(char));
     sprintf(buf, MAIL_FROM, login, hostname);
     runSmtpCommand(buf, s, 0);
 
-    // Посылка RCPT TO
     buf = (char*) calloc (BUFSIZ, sizeof(char));
     sprintf(buf, RCPT_TO, argv[1]);
     runSmtpCommand(buf, s, 0);
 
-    // Посылка DATA
     runSmtpCommand(DATA, s, 0);
 
-    // Подготовка заголовка
     char finalMessage[BUFSIZ] = "";
     char tempFrom[100];
     sprintf(tempFrom, FROM, login, hostname);
@@ -100,20 +94,19 @@ int main(int argc, char* argv[]) {
     char tempSubject[BUFSIZ];
     sprintf(tempSubject, SUBJECT, subject);
     strcat(finalMessage, tempSubject);
-    // Подготовка письма
+  
     char message[BUFSIZ];
     i = 0;
-    while ((n=getchar()) != EOF) {
+    while ((n=getchar()) != '.') {
         message[i++] = n;
     }
     char tempMessage[BUFSIZ];
     sprintf(tempMessage, MESSAGE, message);
     strcat(finalMessage, tempMessage);
     strcat(finalMessage, DOT);
-    // Посылка письма
+
     runSmtpCommand(finalMessage, s, 1);
 
-    // Посылка QUIT
     runSmtpCommand(QUIT, s, 0);
     close(s);
     return 0;

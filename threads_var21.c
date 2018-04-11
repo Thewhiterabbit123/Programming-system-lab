@@ -47,7 +47,7 @@ void* solver(void* arg) {
 			}
 		
 		}
-		printf("t - %d\n", k);
+		
 	//pthread_barrier_wait(&barr);
 	//pthread_barrier_wait(&barr);
 	}
@@ -173,9 +173,9 @@ int main(int argc, char const *argv[]) {
    	gettimeofday(&tv2, &tz);
 	printf("%ldms\n", tv2.tv_sec - tv1.tv_sec);
 
-	//x-10000 y-10000 z-100 - 8min, 17sec   1 thread
-	//x-10000 y-10000 z-100 - 4min, 07sec   2 threads
-	//x-10000 y-10000 z-100 - 2min, 05sec   4 threads
+	//x-10000 y-10000 z-100 - 490s   1 thread
+	//x-10000 y-10000 z-100 - 265s   2 threads
+	//x-10000 y-10000 z-100 - 125s   4 threads
 	//x-10000 y-10000 z-100 - 1min, 49 sec  8 threads
 
 
