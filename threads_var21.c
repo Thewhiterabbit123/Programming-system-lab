@@ -47,9 +47,9 @@ void* solver(void* arg) {
 			}
 		
 		}
-		
-	//pthread_barrier_wait(&barr);
-	//pthread_barrier_wait(&barr);
+		printf("t - %d\n", k);
+	pthread_barrier_wait(&barr);
+	pthread_barrier_wait(&barr);
 	}
 
 	
@@ -94,7 +94,7 @@ int main(int argc, char const *argv[]) {
 	matrix_memory();
 
 	
-	/*FILE * gnu = popen("gnuplot -persistent", "w");
+	FILE * gnu = popen("gnuplot -persistent", "w");
 	fprintf(gnu, "set terminal gif animate delay 50\n");
 	fprintf(gnu, "set output 'animate.gif'\n");
     
@@ -116,7 +116,7 @@ int main(int argc, char const *argv[]) {
 	      fprintf(gnu, "%lf %lf %lf\n", (double)i, (double)j, matrix[i][j][0]);
 	    }
 	}
-	fprintf(gnu, "e\n");*/
+	fprintf(gnu, "e\n");
 	
 	ThreadRecord* threads = NULL;
 	struct timeval tv1, tv2;
@@ -150,7 +150,7 @@ int main(int argc, char const *argv[]) {
 
 
 	
-	/*for (int k = 1; k < t_grid; ++k) {
+	for (int k = 1; k < t_grid; ++k) {
 	pthread_barrier_wait(&barr);
 	  for (int i = 0; i < x_grid; ++i) {
 	    for (int j = 0; j < y_grid; ++j) {
@@ -161,7 +161,7 @@ int main(int argc, char const *argv[]) {
 	  pthread_barrier_wait(&barr);
 	}
 	pclose(gnu);
-	*/
+	
 	
 	
 	
@@ -175,9 +175,9 @@ int main(int argc, char const *argv[]) {
 
 	//x-10000 y-10000 z-100 - 490s   1 thread
 	//x-10000 y-10000 z-100 - 265s   2 threads
-	//x-10000 y-10000 z-100 - 125s   4 threads
-	//x-10000 y-10000 z-100 - 1min, 49 sec  8 threads
-
+	//x-10000 y-10000 z-100 - 126s   4 threads
+	//x-10000 y-10000 z-100 - 108s   8 threads
+	//x-10000 y-10000 z-100 - 108s   16 threads
 
 	return 0;
 }
