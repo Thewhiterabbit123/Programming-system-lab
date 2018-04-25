@@ -16,15 +16,11 @@ double dt = 0;
 double t = 0;
 double a = 1;
 
+int time_steps = 0;
+
 struct timeval tv1, tv2, dtv;
 struct timezone tz;
 
-double force_impact(int x, int y, int t) {
-    if(x == dx/2 && y == dy/2  && t < dt/5) {
-      return 1;
-    }
-    return 0;
-}
 
 void time_start() {
     gettimeofday(&tv1, &tz);
@@ -34,7 +30,7 @@ int boundary_conditions() {
     return 0; // граничное условие первого рода
 }
 
-void * explicit_method(double *prev_iter, double *curr_iter, double *next_iter, int num, double *recv_buf_left, double *recv_buf_right, int proc_id) {
+void * explicit_method(double *prev_iter, double *curr_iter, double *next_iter, int num, double *recv_buf_left, double *recv_buf_right, int proc_id, int current_time) {
     double z_11, z_21, z_01, z_12, z_10, z_11_0, f;
     int i = 0;
 
@@ -59,8 +55,12 @@ void * explicit_method(double *prev_iter, double *curr_iter, double *next_iter, 
             }
 
             z_11_0 = prev_iter[i]; // z_i_j t = -1
-
-            f = dt*force_impact(i%N, i/N, t) ; /// dt * sin((i % N) * (i / N) * t; // f(x,y,t)
+            f=0;
+            if (current_time < time_steps / 2) {
+                 f = 6 ; /// dt * sin((i % N) * (i / N) * t; // f(x,y,t)
+                 //printf("%d %d\n", current_time, time_steps/4);
+            }
+           
 
             next_iter[i] = (a * a * dt * dt / (dx * dx)) * (z_21 + z_01 + z_12 + z_10 - 4 * z_11) + dt * dt * f - z_11_0 + 2 * z_11;
         }
@@ -87,7 +87,6 @@ void * add_new_iter(FILE * input_file, double *res_curr_iter, int num_points, in
         int k = j % num;
 
         fprintf (input_file, "%lf ", res_curr_iter[k * N + k_1]);
-        // printf ("%lf ", res_curr_iter[k * N + k_1]);
 
         if (k == num - 1) {
             fprintf(input_file, "\n");
@@ -107,7 +106,7 @@ void * visualize(FILE *input_file, int num_time) {
 
     for (i = 1; i < num_time; i++) {
         fprintf (gnu, "splot \"input.txt\" index %d matrix w l\n", i);
-        fprintf (gnu, "pause 0.25\n");
+        fprintf (gnu, "pause 0.1\n");
     }
 
     fflush  (gnu);
@@ -115,7 +114,7 @@ void * visualize(FILE *input_file, int num_time) {
 
 
 int main(int argc, char *argv[]) {
-    int i = 0, j = 0, t_out = 10, offset = 0;
+    int i = 0, j = 0, t_out = 100, offset = 0;
     double *res_curr_iter, *res_prev_iter, *next_iter,  *curr_iter, *prev_iter, *save_iter, *save_res, *recv_buf_left, *recv_buf_right;
     FILE *input_file = NULL;
 
@@ -125,7 +124,6 @@ int main(int argc, char *argv[]) {
     double width = 1;
 
     int num_points = 0;
-    int time_steps = 0;
     int num_proc = 0;
     int num_intervals = 0;
     int proc_id = 0;
@@ -171,7 +169,7 @@ int main(int argc, char *argv[]) {
     curr_iter = (double *) calloc (offset * N, sizeof(double));
     prev_iter = (double *) calloc (offset * N, sizeof(double));
 
-    MPI_Scatter ( res_curr_iter, offset * N, MPI_DOUBLE, curr_iter, offset * N, MPI_DOUBLE, 0, MPI_COMM_WORLD); // все процессф ожидают приёма от рута
+    MPI_Scatter ( res_curr_iter, offset * N, MPI_DOUBLE, curr_iter, offset * N, MPI_DOUBLE, 0, MPI_COMM_WORLD); 
     MPI_Scatter ( res_prev_iter, offset * N, MPI_DOUBLE, prev_iter, offset * N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     recv_buf_left = (double *) calloc (N, sizeof(double));
@@ -179,7 +177,7 @@ int main(int argc, char *argv[]) {
 
     for(i = 0; i < time_steps; i++) {
         if (proc_id != 0) {
-            MPI_Sendrecv( curr_iter, N, MPI_DOUBLE, proc_id - 1, 0, recv_buf_left, N, MPI_DOUBLE, proc_id - 1, MPI_ANY_TAG, MPI_COMM_WORLD, &status); // надо ли заранее выделять память
+            MPI_Sendrecv( curr_iter, N, MPI_DOUBLE, proc_id - 1, 0, recv_buf_left, N, MPI_DOUBLE, proc_id - 1, MPI_ANY_TAG, MPI_COMM_WORLD, &status); 
         } else {
             recv_buf_left = NULL;
         }
@@ -190,7 +188,7 @@ int main(int argc, char *argv[]) {
             recv_buf_right = NULL;
         }
 
-        explicit_method(prev_iter, curr_iter, next_iter, offset * N, recv_buf_left, recv_buf_right, proc_id); //??????????????????????
+        explicit_method(prev_iter, curr_iter, next_iter, offset * N, recv_buf_left, recv_buf_right, proc_id, i); 
 
         save_iter = prev_iter;
         prev_iter = curr_iter;
@@ -205,7 +203,7 @@ int main(int argc, char *argv[]) {
 
         MPI_Gather (curr_iter, offset * N, MPI_DOUBLE, res_curr_iter, offset * N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-        if (!proc_id && (i % t_out == 0 || i == time_steps - 1)) {
+        if (!proc_id) {
             num_time++;
             add_new_iter(input_file, res_curr_iter, num_points, N);
         }
