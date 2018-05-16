@@ -41,12 +41,13 @@ void calculate(double* zc, double* fz, double* zp, int rank, int size, int n, in
 				fz[kol]=0;
 				kol++;
 			} else {
-				if(i == 0 || i == n - 1) {
+				if(i == 0 || i == n - 1 || kol % n == 0 || kol/n == n-1){
+					printf("lol");
 					fz[kol]=0; 
 					k++;
 					kol++;
 				} else {
-				    fz[kol]=A*A*dt*dt*((zc[k+1] - 2 * zc[k] + zc[k-1])/(dx*dx) + (zc[k+n] - 2 * (zc[k]) + zc[k-n])/(dy*dy)) + force_impact(i, j, t, n, m)*(dt*dt) + 2 * zc[k] - zp[k];
+				        fz[kol]=A*A*dt*dt*((zc[k+1] - 2 * zc[k] + zc[k-1])/(dx*dx) + (zc[k+n] - 2 * (zc[k]) + zc[k-n])/(dy*dy)) + force_impact(i, j, t, n, m)*(dt*dt) + 2 * zc[k] - zp[k];
 					k++;
 					kol++;
 				}
