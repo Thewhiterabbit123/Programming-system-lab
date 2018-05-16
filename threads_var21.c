@@ -20,11 +20,11 @@ double*** matrix;
 int y_grid = 0, x_grid = 0, t_grid = 0, thread_quantity = 0;;
 pthread_barrier_t barr;
 
-#define _NEXT_TIME(Z2, Z1, Z0, DELTA) (Z2-2*Z1+Z0)/DELTA
-#define _STABLE(DX, A) DX*DX / 2*A
+#define _NEXT_TIME(Z2, Z1, Z0, DELTA) (Z2 - 2 * Z1 + Z0) / DELTA
+#define _STABLE(DX, A) DX * DX / 2 * A
 
 double force_impact(int x, int y, int t) {
-    if(x == x_grid/2 && y == y_grid/2  && t < t_grid/5) {
+    if (x == x_grid/2 && y == y_grid/2  && t < t_grid/5) {
       return 1;
     }
     return 0;
@@ -33,7 +33,7 @@ double force_impact(int x, int y, int t) {
 int next_time_t(int i, int j, int t) {
 	matrix[i][j][(t+1) % T_IN_MEMORY] = a*a*dt*((_NEXT_TIME(matrix[i+1][j][t % T_IN_MEMORY], matrix[i][j][t % T_IN_MEMORY], matrix[i-1][j][t % T_IN_MEMORY], dx)  + 
 									   			 _NEXT_TIME(matrix[i][j+1][t % T_IN_MEMORY], matrix[i][j][t % T_IN_MEMORY], matrix[i][j-1][t % T_IN_MEMORY], dy)) + 
-									   			force_impact(i, j, t)) + 2*matrix[i][j][t % T_IN_MEMORY] - matrix[i][j][(t-1)%T_IN_MEMORY];
+									   			 force_impact(i, j, t)) + 2*matrix[i][j][t % T_IN_MEMORY] - matrix[i][j][(t-1)%T_IN_MEMORY];
 	return 0;
 }
 
@@ -47,7 +47,7 @@ void* solver(void* arg) {
 			}
 		
 		}
-		printf("t - %d\n", k);
+	printf("t - %d\n", k);
 	pthread_barrier_wait(&barr);
 	pthread_barrier_wait(&barr);
 	}
